@@ -2,7 +2,7 @@ import polars as pl
 import time
 
 def extraction():
-    path1="yellow_tripdata.parquet"
+    path1="yellow_tripdata/*.parquet"
     df_trips= pl_read_parquet(path1,)
     path2 = "taxi+_zone_lookup.parquet"
     df_zone = pl_read_parquet(path2,)
@@ -13,13 +13,13 @@ def pl_read_parquet(path, ):
     """
     Converting parquet file into Polars dataframe
     """
-    df= pl.read_parquet(path,)
+    df= pl.scan_parquet(path,)
     return df
 
 def transformation(df_trips, df_zone):
     df_trips= mean_test_speed_pl(df_trips, )
     df = df_trips.join(df_zone,how="inner", left_on="PULocationID", right_on="LocationID",)
-    df = df[["Borough","Zone","trip_distance","passenger_count"]]
+    df = df.select(["Borough","Zone","trip_distance","passenger_count"])
   
     df = get_Queens_test_speed_pd(df)
     df = round_column(df, "passenger_count",0)
@@ -27,8 +27,8 @@ def transformation(df_trips, df_zone):
     
     df = rename_column(df, "passenger_count","mean_passenger_count")
     df = rename_column(df, "trip_distance","mean_trip_distance")
-    df = sort_by_columns_desc(df, "mean_passenger_count")
-    return df
+    df = sort_by_columns_desc(df, "mean_trip_distance")
+    return df  # return lazy dataframecd 
 
 def rename_column(df, column_old, column_new):
     """
@@ -41,7 +41,7 @@ def mean_test_speed_pl(df_pl,):
     """
     Getting Mean per PULocationID
     """
-    df_pl = df_pl[['PULocationID', "trip_distance", "passenger_count"]].groupby('PULocationID').mean()
+    df_pl = df_pl.groupby('PULocationID').agg(pl.col(["trip_distance", "passenger_count"]).mean())
     return df_pl
 
 def sort_by_columns_desc(df, column):
@@ -71,7 +71,7 @@ def loading_into_parquet(df_pl):
     """
     Save dataframe in parquet
     """
-    df_pl.write_parquet(f'yellow_tripdata_pl.parquet')
+    df_pl.collect(streaming=True).write_parquet(f'yellow_tripdata_pl.parquet')
 
 def main():
     

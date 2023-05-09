@@ -28,7 +28,7 @@ def mean_test_speed_py(df,):
 
 def extraction():
     spark = SparkSession.builder.appName("ETL").getOrCreate()
-    path1 = "yellow_tripdata.parquet"
+    path1 = "yellow_tripdata"
     df_trips = spark.read.parquet(path1)
     path2 = "taxi+_zone_lookup.parquet"
     df_zone = spark.read.parquet(path2)
@@ -47,7 +47,7 @@ def transformation(df_trips, df_zone):
     df = round_column(df,"mean_passenger_count", 0)
     df = round_column(df,"mean_trip_distance", 2)
 
-    df = df.orderBy(col("mean_passenger_count").desc())
+    df = df.orderBy(col("mean_trip_distance").desc())
     return df
 
 def loading_into_parquet(df):
@@ -55,7 +55,6 @@ def loading_into_parquet(df):
 
 def main():
     print("Starting ETL for PySpark")
-    print("\n")
     start_time = time.perf_counter()
 
     print("Extracting...")
@@ -64,20 +63,15 @@ def main():
     end_extract = time.perf_counter()
     time_extract = end_extract - start_time
     print(f"Extraction Parquet end in {str(time_extract)} seconds")
-
-    print("\n")
     print("Transforming...")
     df = transformation(df_trips, df_zone)
     end_transform = time.perf_counter()
     time_transformation = end_transform - end_extract
     print(f"Transformation end in {str(time_transformation)} seconds")
-
-    print("\n")
     print("Loading...")
     loading_into_parquet(df)
     load_transformation = time.perf_counter() - end_transform
     print(f"Loading end in {str(load_transformation)} seconds")
-    print("\n")
     print(f"End ETL for PySpark in {str(time.perf_counter()-start_time)}")
 
 
